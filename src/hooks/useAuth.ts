@@ -17,8 +17,6 @@ const generateNumericId = (): string => {
 export const useAuth = () => {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [showDeviceSelection, setShowDeviceSelection] = useState(false);
-  const [pendingAuth, setPendingAuth] = useState<{username: string, password: string, isRegister: boolean} | null>(null);
 
   useEffect(() => {
     const savedUser = localStorage.getItem('messenger_user');
@@ -37,27 +35,18 @@ export const useAuth = () => {
     setIsLoading(false);
   }, []);
 
-  const handleDeviceSelection = async (deviceType: 'desktop' | 'mobile') => {
-    if (!pendingAuth) return;
-
-    const { username, password, isRegister } = pendingAuth;
-    
-    if (isRegister) {
-      await completeRegistration(username, password, deviceType);
-    } else {
-      await completeLogin(username, password, deviceType);
-    }
-    
-    setShowDeviceSelection(false);
-    setPendingAuth(null);
+  const getDeviceType = (): 'desktop' | 'mobile' => {
+    // Auto-detect device type based on screen width
+    return window.innerWidth < 768 ? 'mobile' : 'desktop';
   };
 
-  const completeLogin = async (username: string, password: string, deviceType: 'desktop' | 'mobile'): Promise<boolean> => {
+  const login = async (username: string, password: string): Promise<boolean> => {
+    const deviceType = getDeviceType();
     const users = JSON.parse(localStorage.getItem('messenger_users') || '[]');
     const existingUser = users.find((u: any) => u.username === username && u.password === password && !u.isDeleted);
     
     if (existingUser) {
-      // Обновляем тип устройства
+      // Update device type
       existingUser.deviceType = deviceType;
       existingUser.lastLoginDevice = deviceType;
       existingUser.lastLogin = new Date().toISOString();
@@ -82,16 +71,16 @@ export const useAuth = () => {
       setUser(authUser);
       localStorage.setItem('messenger_user', JSON.stringify(authUser));
       
-      // Подключаемся к глобальной базе данных
+      // Connect to global database
       try {
         await globalDatabase.connect({
           userId: existingUser.id,
           username: existingUser.username,
           deviceType
         });
-        console.log('✅ Подключен к глобальной БД при входе');
+        console.log('✅ Connected to global DB on login');
       } catch (error) {
-        console.error('Ошибка подключения к глобальной БД:', error);
+        console.error('Error connecting to global DB:', error);
       }
       
       return true;
@@ -99,7 +88,8 @@ export const useAuth = () => {
     return false;
   };
 
-  const completeRegistration = async (username: string, password: string, deviceType: 'desktop' | 'mobile'): Promise<boolean> => {
+  const register = async (username: string, password: string): Promise<boolean> => {
+    const deviceType = getDeviceType();
     if (username.trim().length < 3 || password.trim().length < 6) {
       return false;
     }
@@ -165,56 +155,18 @@ export const useAuth = () => {
     setUser(authUser);
     localStorage.setItem('messenger_user', JSON.stringify(authUser));
     
-    // Подключаемся к глобальной базе данных
+    // Connect to global database
     try {
       await globalDatabase.connect({
         userId: newUser.id,
         username: newUser.username,
         deviceType
       });
-      console.log('✅ Подключен к глобальной БД при регистрации');
+      console.log('✅ Connected to global DB on registration');
     } catch (error) {
-      console.error('Ошибка подключения к глобальной БД:', error);
+      console.error('Error connecting to global DB:', error);
     }
     
-    return true;
-  };
-
-  const login = (username: string, password: string): boolean => {
-    // Сначала проверяем, существует ли пользователь
-    const users = JSON.parse(localStorage.getItem('messenger_users') || '[]');
-    const existingUser = users.find((u: any) => u.username === username && u.password === password && !u.isDeleted);
-    
-    if (existingUser) {
-      // Если у пользователя уже есть сохраненный тип устройства, используем его
-      if (existingUser.deviceType) {
-        completeLogin(username, password, existingUser.deviceType);
-        return true;
-      } else {
-        // Показываем выбор устройства
-        setPendingAuth({ username, password, isRegister: false });
-        setShowDeviceSelection(true);
-        return true;
-      }
-    }
-    return false;
-  };
-
-  const register = (username: string, password: string): boolean => {
-    if (username.trim().length < 3 || password.trim().length < 6) {
-      return false;
-    }
-
-    const users = JSON.parse(localStorage.getItem('messenger_users') || '[]');
-    const existingUser = users.find((u: any) => u.username === username && !u.isDeleted);
-    
-    if (existingUser) {
-      return false;
-    }
-
-    // Показываем выбор устройства для нового пользователя
-    setPendingAuth({ username, password, isRegister: true });
-    setShowDeviceSelection(true);
     return true;
   };
 
@@ -483,14 +435,12 @@ export const useAuth = () => {
   return { 
     user, 
     isLoading, 
-    showDeviceSelection,
     login, 
     register, 
     updateProfile, 
     deleteAccount,
     logout, 
     clearAllData, 
-    exportData,
-    handleDeviceSelection
+    exportData
   };
 };

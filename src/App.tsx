@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { AuthScreen } from './components/AuthScreen';
-import { DeviceSelection } from './components/DeviceSelection';
 import { ChatList } from './components/ChatList';
 import { ChatWindow } from './components/ChatWindow';
 import { Sidebar } from './components/Sidebar';
@@ -13,15 +12,13 @@ function App() {
   const { 
     user, 
     isLoading, 
-    showDeviceSelection,
     login, 
     register, 
     updateProfile, 
     deleteAccount,
     logout, 
     clearAllData, 
-    exportData,
-    handleDeviceSelection
+    exportData
   } = useAuth();
   const { 
     users, 
@@ -251,15 +248,6 @@ function App() {
           <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
           <p className="text-white animate-pulse">Загрузка...</p>
         </div>
-      </div>
-    );
-  }
-
-  if (showDeviceSelection) {
-    return (
-      <div className="relative min-h-screen bg-transparent">
-        <WaterEffect />
-        <DeviceSelection onDeviceSelect={handleDeviceSelection} />
       </div>
     );
   }
